@@ -5,6 +5,8 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
 
+import javax.validation.constraints.NotEmpty;
+
 @Getter
 @Setter
 @SuperBuilder
@@ -12,9 +14,12 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CarInfoReq {
+    @NotEmpty
     String licenseNumber;
-    String VINnumber;
+    @NotEmpty
+    String VINNumber;
     String ownerFirstName;
+    @NotEmpty
     String ownerLastName;
     Brand brand;
 }
