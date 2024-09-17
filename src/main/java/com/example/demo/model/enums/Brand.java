@@ -4,5 +4,7 @@ public enum Brand {
     BMW,
     MERCEDES,
     HYUNDAI,
-    KIA
+    KIA,
+    LADA;
+
 }
