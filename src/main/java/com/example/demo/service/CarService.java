@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.exceptions.CustomException;
 import com.example.demo.model.db.entity.Car;
 import com.example.demo.model.db.entity.User;
 import com.example.demo.model.db.repository.CarRepository;
@@ -16,12 +17,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,16 +46,11 @@ public class CarService {
     }
 
     private Car getCarFromDB(Long id) {
-        return carRepository.findById(id).orElse(new Car());
+        return carRepository.findById(id).orElseThrow(() -> new CustomException(String.format("Car with id %d is not found", id), HttpStatus.NOT_FOUND));
     }
 
     public CarInfoResp getCar(Long id) {
-        Optional<Car> car = carRepository.findById(id);
-        if (car.isPresent()) {
-            return objectMapper.convertValue(car.get(), CarInfoResp.class);
-        } else {
-            return null;
-        }
+        return objectMapper.convertValue(getCarFromDB(id), CarInfoResp.class);
     }
 
     public CarInfoResp updateCar(Long id, CarInfoReq request) {
@@ -89,7 +85,7 @@ public class CarService {
         if (filter == null) {
             allByStatusNot = carRepository.findAllByStatusNot(pageRequest, CarStatus.DELETED);
         } else {
-            allByStatusNot = carRepository.findAllByStatusNotFiltered(pageRequest, CarStatus.DELETED, filter);
+            allByStatusNot = carRepository.findAllByStatusNotFiltered(pageRequest, CarStatus.DELETED, filter.toLowerCase());
         }
 
         List<CarInfoResp> content = allByStatusNot.getContent().stream()
@@ -106,8 +102,8 @@ public class CarService {
     public Page<CarInfoResp> getAllCarsByUserId(Long userId, Integer page, Integer sizePerPage, String sort, Sort.Direction order) {
         User user = userService.getUserFromDB(userId);
 
-        if (user == null || user.getStatus().equals(UserStatus.DELETED)) {
-            return null;
+        if (user.getStatus().equals(UserStatus.DELETED)) {
+            throw new CustomException(String.format("User Info with id: %d is DELETED from DataBase", userId), HttpStatus.NO_CONTENT);
         }
         Pageable pageRequest = PaginationUtil.getPageRequest(page, sizePerPage, sort, order);
 
@@ -121,15 +117,8 @@ public class CarService {
     }
 
     public void addCarToUser(@Valid CarToUserReq request) {
-        Car car = carRepository.findById(request.getCarId()).orElse(null);
-        if (car == null) {
-            return;
-        }
-
+        Car car = getCarFromDB(request.getCarId());
         User user = userService.getUserFromDB(request.getUserId());
-        if (user == null) {
-            return;
-        }
 
         user.getCars().add(car);
         userService.updateUserData(user);
